@@ -1,0 +1,217 @@
+free DataA:bitstring [private].    (*IDi*)
+free DataB:bitstring [private].    (*xoi*)
+free DataC:bitstring [private].    (*uoi*)
+
+free DataD:bitstring [private].    (*xcl*)
+free DataE:bitstring [private].	   (*wcl*)
+free DataF:bitstring [private].    (*k*)
+free DataG:bitstring [private].    (*s*)
+free DataH:bitstring [private].    (*koi*)
+
+
+(*communication channel *)
+free V2CGC : channel [private].
+free CS2CGC : channel [private].
+free OBU2RSU_PRIVATE : channel [private].
+free CS2RSU_PRIVATE : channel [private].
+
+free OBU2RSU : channel.
+free CS2RSU : channel.
+free V2CS:channel.
+
+const Ppub:bitstring.
+const P : bitstring. (* Public Terms *) 
+
+(*Constructor*)
+fun XOR(bitstring, bitstring) : bitstring. (* Exclusive OR *) 
+fun Concat(bitstring, bitstring) : bitstring. 
+fun ADD(bitstring,bitstring):bitstring.
+fun H1(bitstring) : bitstring. 
+fun H2(bitstring, bitstring) : bitstring. 
+fun H3(bitstring, bitstring, bitstring) : bitstring. 
+fun H4(bitstring, bitstring, bitstring, bitstring) : bitstring. 
+fun H5(bitstring, bitstring, bitstring, bitstring, bitstring) :bitstring. 
+
+
+fun a_mul_P(bitstring, bitstring) : bitstring. (* a*P *) 
+fun Cert(bitstring, bitstring, bitstring): bitstring. 
+fun CertP(bitstring, bitstring, bitstring): bitstring. 
+fun get_kA_star(bitstring, bitstring, bitstring): bitstring.
+fun get_m1(bitstring, bitstring, bitstring): bitstring.
+fun get_new_CH(bitstring, bitstring, bitstring): bitstring.
+fun get_delta(bitstring,bitstring,bitstring,bitstring,bitstring):bitstring.
+fun get_deltap(bitstring,bitstring,bitstring,bitstring,bitstring,bitstring,bitstring):bitstring.
+fun get_Noi(bitstring,bitstring,bitstring,bitstring,bitstring):bitstring.
+fun get_Noi_star(bitstring,bitstring,bitstring):bitstring.
+fun senc(bitstring,bitstring):bitstring.
+fun pk(bitstring):bitstring.
+fun aenc(bitstring,bitstring) : bitstring.
+
+
+(*Destructor function*)
+reduc forall m1 : bitstring, m2 : bitstring; Separate1(Concat(m1, m2)) = m1. 
+reduc forall m1 : bitstring, m2 : bitstring; Separate2(Concat(m1, m2)) = m2. 
+reduc forall m1 : bitstring, m2 : bitstring; DXOR_getSecond(XOR(m1, m2), m1) = m2. 
+reduc forall m1 : bitstring, m2 : bitstring; DXOR_getFirst(XOR(m1, m2), m2) = m1. 
+(*reduc forall a:bitstring,b:bitstring,c:bitstring,d:bitstring,e:bitstring;a_mul_P(Cert(a,b,c),P)=CertP(d,b,e).*)
+(*reduc forall m0 : bitstring, r1 : bitstring,r0:bitstring,x:bitstring,G:bitstring; D_get_new_CH(get_new_CH(get_m1(get_kA_star(m0,r0,x),r1,x), r1,a_mul_G(x,G))) = x. *)
+(*reduc forall a:bitstring,b:bitstring,c:bitstring,d:bitstring,e:bitstring,f:bitstring,g:bitstring,h:bitstring,i:bitstring,j:bitstring;a_mul_P(get_delta(a,b,c,d,e),P)=get_deltap(f,b,c,g,h,i,j).*)
+reduc forall m: bitstring, sk: bitstring; adec(aenc(m,pk(sk)),sk) = m.
+(*create Table*)
+table VTable(bitstring,bitstring,bitstring). 
+table CsTable(bitstring,bitstring,bitstring,bitstring).
+
+ (*eight event*)
+event RSU_OBU_begin(bitstring).
+event OBU_RSU_end(bitstring).
+event RSU_CS_begin(bitstring).
+event CS_RSU_end(bitstring).
+event Device_RSU_begin(bitstring).
+event RSU_OBU_end(bitstring).
+event OBU_RSU_begin(bitstring).
+event Device_RSU_end(bitstring).
+event RSU_Device_begin(bitstring).
+event RSU_Device_end(bitstring).
+(*query*)
+query attacker(DataA).
+query attacker(DataG).
+query attacker(DataD).
+query attacker(DataE).
+query attacker(DataF).
+query attacker(DataF).
+query attacker(DataG).
+query attacker(DataH).
+
+(*correspondence assertions*)
+query t:bitstring; inj-event(OBU_RSU_end(t)) ==> inj-event(OBU_RSU_begin(t)).
+query t:bitstring; event(RSU_Device_end(t)) ==> event(RSU_Device_begin(t)).
+query t:bitstring; event(RSU_OBU_end(t)) ==> event(RSU_OBU_begin(t)).
+query t:bitstring; inj-event(Device_RSU_end(t)) ==> inj-event(Device_RSU_begin(t)).
+
+(*CGC Registration Center*)
+let processThirdParty() =	
+	in(V2CGC,(FID1i:bitstring));
+	new roi : bitstring;
+	let Roi=a_mul_P(roi,P) in
+	let h1i = H3(FID1i, Roi, Ppub) in
+	let di = Cert(roi, DataG, h1i) in
+	
+	out(V2CGC,(di,Roi));  
+	
+	in(CS2CGC,(IDcl:bitstring));
+	new rcl : bitstring;
+	let Rcl=a_mul_P(rcl,P) in
+	let h1l = H3(IDcl, Rcl, Ppub) in
+	let dcl = Cert(rcl, DataG, h1l) in
+	
+	out(CS2CGC,(dcl,Rcl));
+	0.
+
+(*OBU*)
+let processOBU(DataA:bitstring,DataB:bitstring,DataC:bitstring,DataG:bitstring,RSU:bitstring,OBU:bitstring,IDcl:bitstring,PKcl : bitstring) =
+	new ai : bitstring;
+	new bi : bitstring;
+	let FID1i=H1(XOR(DataA,ai)) in
+	let FID2i=H1(XOR(DataA,bi)) in
+	
+	out(V2CGC, (FID1i)); 
+	in(V2CGC, (di:bitstring,Roi:bitstring));   
+	let Cert_1=a_mul_P(di,P) in
+	if Cert_1=Cert_1 then
+    let Xoi=a_mul_P(DataB,P) in
+	let ski=DataB in
+	let PKoi=Concat(Roi,Xoi) in
+	out(V2CS,(Roi,Xoi));
+	
+	
+	event RSU_OBU_begin(RSU);
+	let FIDOi=ADD(FID1i,FID2i) in
+	let zi=H1(FIDOi) in
+	new Toi:bitstring;
+	let Uoi=a_mul_P(DataC,P) in
+	let Moi=H4(zi,IDcl,Uoi,Toi) in
+	let h2i=H3(Moi,PKoi,Uoi) in
+	let h3i=H4(Ppub,PKoi,Uoi,h2i) in
+	let deltaoi=get_delta(di,h2i,h3i,DataC,DataB) in
+	out(OBU2RSU, (zi,IDcl,Uoi,Toi,deltaoi,FID1i));
+
+	in(CS2RSU,(Wcl:bitstring,Ci:bitstring,deltacl:bitstring,Tcl:bitstring,Rcl:bitstring));
+	let deltap_cl=a_mul_P(deltacl,P) in
+	let h1l = H3(IDcl, Rcl, Ppub) in
+	let h2l=H3(Ci,PKcl,Wcl) in
+	let h3l=H4(Ppub,PKcl,Wcl,h2l) in
+	let deltap_cl_1=get_deltap(h1l,h2l,h3l,Rcl,Wcl,PKcl,Ppub) in
+	if deltap_cl=deltap_cl_1 then 
+	let k=adec(Ci,DataB) in
+    let Noi=get_Noi_star(DataB,di,Wcl) in
+    let koi=H2(k,Noi) in
+
+	event RSU_OBU_end(RSU);
+	0.
+
+	(*Roadside*)
+let processRSU(OBU:bitstring,RSU:bitstring,CS:bitstring)=
+	
+	in(OBU2RSU, (zi:bitstring ,IDcl:bitstring ,Uoi:bitstring, Toi:bitstring, deltaoi:bitstring, FID1i:bitstring));
+	    
+	let Moi=H4(zi,IDcl,Uoi,Toi) in
+	event Device_RSU_begin(CS);	
+	new Trj:bitstring;
+	out(CS2RSU,(deltaoi,FID1i,Uoi,Moi,Trj));
+	
+	
+	in(CS2RSU,(Wcl:bitstring,Ci:bitstring,deltacl:bitstring,Tcl:bitstring,Rcl:bitstring));
+	
+
+	event RSU_OBU_begin(OBU);
+	
+	out(CS2RSU,(Wcl, Ci, deltacl, Tcl,Rcl));
+	
+	event RSU_OBU_end(OBU); 
+	
+	0.
+
+	(*CS*)
+let processCS(DataD:bitstring,DataE:bitstring,DataF:bitstring,RSU:bitstring,CS:bitstring,IDcl:bitstring,PKcl : bitstring,PKoi:bitstring) =
+	out(CS2CGC,IDcl);
+	in(CS2CGC, (dcl:bitstring,Rcl:bitstring));   
+	let Cert_2=a_mul_P(dcl,P) in
+	if Cert_2=Cert_2 then
+    let Xcl=a_mul_P(DataD,P) in
+	let skcl=DataD in
+
+	in(CS2RSU,(deltaoi:bitstring,FID1i:bitstring,Uoi:bitstring,Moi:bitstring,Toi:bitstring));
+	in(V2CS,(Roi:bitstring,Xoi:bitstring));
+	event RSU_Device_begin(CS);
+	let h1i = H3(FID1i, Roi, Ppub) in
+	let h2i=H3(Moi,PKoi,Uoi) in
+	let h3i=H4(Ppub,PKoi,Uoi,h2i) in
+	let deltap=a_mul_P(deltaoi,P) in
+	let deltap_1=get_deltap(h1i,h2i,h3i,Roi,Ppub,Uoi,Xoi) in
+	if (deltap=deltap_1) then
+	
+    let Wcl=a_mul_P(DataE,P) in
+    let Noi=get_Noi(DataE,Xoi,Roi,h1i,Ppub) in
+    new Tcl:bitstring;
+    let koi=H2(DataF,Noi) in
+    let Ci=aenc(DataF,PKoi) in
+    let h1l = H3(IDcl, Rcl, Ppub) in
+	let h2l=H3(Ci,PKcl,Wcl) in
+	let h3l=H4(Ppub,PKcl,Wcl,h2l) in
+    let deltacl=get_delta(dcl,h2l,h3l,DataE,DataD) in
+
+	
+	out(CS2RSU,(Wcl, Ci, deltacl, Tcl,Rcl));
+	event Device_RSU_end(CS);
+	event RSU_Device_end(CS);
+	0.
+(*main*)
+process 
+	new OBU:bitstring; 
+	new RSU:bitstring; 
+	new CS:bitstring;
+	new IDcl:bitstring;
+	new PKcl:bitstring;
+	new PKoi:bitstring;
+	
+   ( !(processThirdParty()) | (!processCS(DataD,DataE,DataF,RSU,CS,IDcl,PKcl,PKoi)) | (!processOBU(DataA,DataB,DataC,DataG,RSU,OBU,IDcl,PKcl)) |(!processRSU(OBU,RSU, CS)) )  
