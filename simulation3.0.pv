@@ -4,9 +4,8 @@ free DataC:bitstring [private].    (*uoi*)
 
 free DataD:bitstring [private].    (*xcl*)
 free DataE:bitstring [private].	   (*wcl*)
-free DataF:bitstring [private].    (*k*)
-free DataG:bitstring [private].    (*s*)
-free DataH:bitstring [private].    (*koi*)
+free DataF:bitstring [private].    (*s*)
+free DataG:bitstring [private].    (*koi*)
 
 
 (*communication channel *)
@@ -74,13 +73,12 @@ event RSU_Device_begin(bitstring).
 event RSU_Device_end(bitstring).
 (*query*)
 query attacker(DataA).
-query attacker(DataG).
+query attacker(DataB).
+query attacker(DataC).
 query attacker(DataD).
 query attacker(DataE).
 query attacker(DataF).
-query attacker(DataF).
 query attacker(DataG).
-query attacker(DataH).
 
 (*correspondence assertions*)
 query t:bitstring; inj-event(OBU_RSU_end(t)) ==> inj-event(OBU_RSU_begin(t)).
@@ -94,7 +92,7 @@ let processThirdParty() =
 	new roi : bitstring;
 	let Roi=a_mul_P(roi,P) in
 	let h1i = H3(FID1i, Roi, Ppub) in
-	let di = Cert(roi, DataG, h1i) in
+	let di = Cert(roi, DataF, h1i) in
 	
 	out(V2CGC,(di,Roi));  
 	
@@ -102,13 +100,13 @@ let processThirdParty() =
 	new rcl : bitstring;
 	let Rcl=a_mul_P(rcl,P) in
 	let h1l = H3(IDcl, Rcl, Ppub) in
-	let dcl = Cert(rcl, DataG, h1l) in
+	let dcl = Cert(rcl, DataF, h1l) in
 	
 	out(CS2CGC,(dcl,Rcl));
 	0.
 
 (*OBU*)
-let processOBU(DataA:bitstring,DataB:bitstring,DataC:bitstring,DataG:bitstring,RSU:bitstring,OBU:bitstring,IDcl:bitstring,PKcl : bitstring) =
+let processOBU(DataA:bitstring,DataB:bitstring,DataC:bitstring,DataF:bitstring,RSU:bitstring,OBU:bitstring,IDcl:bitstring,PKcl : bitstring) =
 	new ai : bitstring;
 	new bi : bitstring;
 	let FID1i=H1(XOR(DataA,ai)) in
@@ -135,16 +133,15 @@ let processOBU(DataA:bitstring,DataB:bitstring,DataC:bitstring,DataG:bitstring,R
 	let deltaoi=get_delta(di,h2i,h3i,DataC,DataB) in
 	out(OBU2RSU, (zi,IDcl,Uoi,Toi,deltaoi,FID1i));
 
-	in(CS2RSU,(Wcl:bitstring,Ci:bitstring,deltacl:bitstring,Tcl:bitstring,Rcl:bitstring));
+	in(CS2RSU,(Wcl:bitstring,deltacl:bitstring,Tcl:bitstring,Rcl:bitstring));
 	let deltap_cl=a_mul_P(deltacl,P) in
 	let h1l = H3(IDcl, Rcl, Ppub) in
-	let h2l=H3(Ci,PKcl,Wcl) in
+	let h2l=H3(IDcl,PKcl,Wcl) in
 	let h3l=H4(Ppub,PKcl,Wcl,h2l) in
 	let deltap_cl_1=get_deltap(h1l,h2l,h3l,Rcl,Wcl,PKcl,Ppub) in
 	if deltap_cl=deltap_cl_1 then 
-	let k=adec(Ci,DataB) in
     let Noi=get_Noi_star(DataB,di,Wcl) in
-    let koi=H2(k,Noi) in
+    let koi=H2(IDcl,Noi) in
 
 	event RSU_OBU_end(RSU);
 	0.
@@ -160,12 +157,12 @@ let processRSU(OBU:bitstring,RSU:bitstring,CS:bitstring)=
 	out(CS2RSU,(deltaoi,FID1i,Uoi,Moi,Trj));
 	
 	
-	in(CS2RSU,(Wcl:bitstring,Ci:bitstring,deltacl:bitstring,Tcl:bitstring,Rcl:bitstring));
+	in(CS2RSU,(Wcl:bitstring,deltacl:bitstring,Tcl:bitstring,Rcl:bitstring));
 	
 
 	event RSU_OBU_begin(OBU);
 	
-	out(CS2RSU,(Wcl, Ci, deltacl, Tcl,Rcl));
+	out(CS2RSU,(Wcl, deltacl, Tcl,Rcl));
 	
 	event RSU_OBU_end(OBU); 
 	
@@ -193,15 +190,14 @@ let processCS(DataD:bitstring,DataE:bitstring,DataF:bitstring,RSU:bitstring,CS:b
     let Wcl=a_mul_P(DataE,P) in
     let Noi=get_Noi(DataE,Xoi,Roi,h1i,Ppub) in
     new Tcl:bitstring;
-    let koi=H2(DataF,Noi) in
-    let Ci=aenc(DataF,PKoi) in
+    let koi=H2(IDcl,Noi) in
     let h1l = H3(IDcl, Rcl, Ppub) in
-	let h2l=H3(Ci,PKcl,Wcl) in
+	let h2l=H3(IDcl,PKcl,Wcl) in
 	let h3l=H4(Ppub,PKcl,Wcl,h2l) in
     let deltacl=get_delta(dcl,h2l,h3l,DataE,DataD) in
 
 	
-	out(CS2RSU,(Wcl, Ci, deltacl, Tcl,Rcl));
+	out(CS2RSU,(Wcl, deltacl, Tcl));
 	event Device_RSU_end(CS);
 	event RSU_Device_end(CS);
 	0.
